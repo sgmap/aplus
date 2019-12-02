@@ -227,6 +227,7 @@ case class UserController @Inject()(loginAction: LoginAction,
         }, { users =>
           try {
             if (userService.add(users.map(_.copy(groupIds = List(groupId))))) {
+              applicationService.addInvitedBasedOnExistingInvitedGroup(groupId, users)
               eventService.info("ADD_USER_DONE", "Utilisateurs ajouté")
               Redirect(routes.GroupController.editGroup(groupId)).flashing("success" -> "Utilisateurs ajouté")
             } else {

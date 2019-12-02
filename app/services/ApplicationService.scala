@@ -4,7 +4,7 @@ import java.util.UUID
 
 import javax.inject.Inject
 import anorm.Column.nonNull
-import models.{Answer, Application}
+import models.{Answer, Application, User}
 import play.api.db.Database
 import play.api.libs.json.{Json, JsonConfiguration, JsonNaming}
 import anorm._
@@ -15,7 +15,7 @@ import play.api.libs.json.JodaReads._
 import play.api.libs.json.JodaWrites._
 
 @javax.inject.Singleton
-class ApplicationService @Inject()(db: Database) {
+class ApplicationService @Inject()(db: Database, userService: UserService) {
   import extentions.Anorm._
   import extentions.JsonFormats._
 
@@ -151,6 +151,13 @@ class ApplicationService @Inject()(db: Database) {
     } else {
       result
     }
+  }
+
+  def addInvitedBasedOnExistingInvitedGroup(groupId: UUID, users: List[User]): Int = db.withConnection { implicit connection =>
+    val usersIdOfTheGroup = userService.byGroupIds(groupId :: Nil).map(_.id)
+    SQL"UPDATE application SET = invited_users || {invited_user}::jsonb WHERE ARRAY(select jsonb_object_keys(invited_users))::uuid[] && ARRAY[$usersIdOfTheGroup]::uuid[]"
+      .on('invited_user -> Json.toJson(users.map(user => user.id -> user.name)))
+      .executeUpdate()
   }
 
   def allByArea(areaId: UUID, anonymous: Boolean) = db.withConnection { implicit connection =>
