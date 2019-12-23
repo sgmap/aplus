@@ -151,9 +151,14 @@ case class CSVImportController @Inject()(loginAction: LoginAction,
               val (alreadyExistingUsersErrors, filteredUserGroupInformation) = CsvHelper.filterAlreadyExistingUsersAndGenerateErrors(augmentedUserGroupInformation)
 
               val currentDate = Time.now()
-              val formWithError = importUsersReviewFrom(currentDate)
+              val formWithData = importUsersReviewFrom(currentDate)
                 .fillAndValidate(filteredUserGroupInformation)
-                .withGlobalError("Certaines lignes du CSV n'ont pas pu être importé", userNotImported ++ alreadyExistingUsersErrors :_*)  // TODO : Only if errors
+
+              val formWithError = if(userNotImported.nonEmpty || alreadyExistingUsersErrors.nonEmpty) {
+                formWithData.withGlobalError("Certaines lignes du CSV n'ont pas pu être importé", userNotImported ++ alreadyExistingUsersErrors: _*)
+              } else {
+                formWithData
+              }
               Ok(views.html.reviewUsersImport(request.currentUser)(formWithError))
           })
         })
