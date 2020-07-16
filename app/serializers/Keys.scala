@@ -24,7 +24,6 @@ object Keys {
 
   object Session {
     val userId: String = "userId"
-    val areaId: String = "areaId"
   }
 
   //.queryString .getQueryString

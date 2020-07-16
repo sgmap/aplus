@@ -37,25 +37,6 @@ case class AreaController @Inject() (
     .flatMap(UUIDHelper.fromString)
     .toList
 
-  @deprecated("You should not need area", "v0.1")
-  def change(areaId: UUID) = loginAction { implicit request =>
-    if (!request.currentUser.areas.contains[UUID](areaId)) {
-      eventService.log(ChangeAreaUnauthorized, s"Accès à la zone $areaId non autorisé")
-      Unauthorized(
-        s"Vous n'avez pas les droits suffisants pour accèder à cette zone. Vous pouvez contacter l'équipe A+ : ${Constants.supportEmail}"
-      )
-    } else {
-      eventService.log(AreaChanged, s"Changement vers la zone $areaId")
-      val redirect = request
-        .getQueryString("redirect")
-        .map(url => Redirect(url))
-        .getOrElse(Redirect(routes.ApplicationController.myApplications()))
-      redirect.withSession(
-        request.session - Keys.Session.areaId + (Keys.Session.areaId -> areaId.toString)
-      )
-    }
-  }
-
   def all = loginAction.async { implicit request =>
     if (!request.currentUser.admin && !request.currentUser.groupAdmin) {
       eventService.log(AllAreaUnauthorized, "Accès non autorisé pour voir la page des territoires")

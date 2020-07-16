@@ -77,7 +77,6 @@ POST    /newsletter                      controllers.UserController.subscribeNew
 GET     /territoires                            controllers.AreaController.all
 GET     /territoires/deploiement                controllers.AreaController.deploymentDashboard
 GET     /territoires/deploiement/france-service controllers.AreaController.franceServiceDeploymentDashboard
-GET     /territoires/:areaId                    controllers.AreaController.change(areaId: java.util.UUID)
 GET     /territoires/:areaId/demandes           controllers.ApplicationController.all(areaId: java.util.UUID)
 GET     /territoires/:areaId/demandes.csv       controllers.ApplicationController.allCSV(areaId: java.util.UUID)
 GET     /territoires/:areaId/utilisateurs       controllers.UserController.all(areaId: java.util.UUID)

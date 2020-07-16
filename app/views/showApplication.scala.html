@@ -1,6 +1,7 @@
 @import _root_.helper.Time
 @import _root_.helper.MDLForms._
 @import _root_.helper.BooleanHelper.not
+@import serializers.Keys
 
 
 @(currentUser: User, currentUserRights: Authorization.UserRights)(groupsWithUsersThatCanBeInvited: List[(UserGroup,List[User])], application: Application, answerToAgentsForm: Form[_], openedTab: String, currentArea: Area, userSignature: Option[String], attachments: Iterable[String] = Nil)(implicit webJarsUtil: org.webjars.play.WebJarsUtil, flash: Flash, messagesProvider: MessagesProvider, request: RequestHeader)
@@ -537,10 +538,16 @@ dialog {
                     @if(groupsWithUsersThatCanBeInvited.nonEmpty || currentUser.expert) {
                         <div class="mdl-tabs__panel @if(openedTab =="invite"){ is-active }" id="invite">
                             <form action='@routes.ApplicationController.invite(application.id)' class="mdl-cell mdl-cell--12-col mdl-grid aplus-protected-form" method="post">
+
+                                <input type="hidden"
+                                       name="@{Keys.Application.areaId}"
+                                       readonly
+                                       value="@{currentArea.id}">
+
                                 @if(currentUser.expert) {
                                     <div>
-                                        Territoire concerné :
-                                    @helpers.changeArea(currentArea, currentUser.areas.flatMap(Area.fromId))
+                                      Territoire concerné :
+                                      @helpers.changeAreaSelect(currentArea, currentUser.areas.flatMap(Area.fromId), routes.ApplicationController.show(application.id))
                                     </div>
                                 }
                                 @helper.CSRF.formField
