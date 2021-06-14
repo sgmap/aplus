@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: aplus-db
+  labels:
+    app: aplus
+spec:
+  clusterIP: None
+  ports:
+  - port: 5432
+  selector:
+    app: aplus
+    tier: postgres
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: aplus-db-pvc
+  labels:
+    app: aplus
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: csi-cinder-classic
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: aplus-db-statefulset
+  labels:
+    app: aplus
+spec:
+  selector:
+    matchLabels:
+      app: aplus
+      tier: postgres
+  serviceName: aplus-db
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: aplus
+        tier: postgres
+    spec:
+      containers:
+        - name: postgres-database
+          image: postgres:11
+          volumeMounts:
+            - name: aplus-db-pv
+              mountPath: /var/lib/postgresql/data
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: aplus-db-postgres-secret
+                  key: DATABASE_URL
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+      volumes:
+        - name: aplus-db-pv
+          persistentVolumeClaim:
+            claimName: aplus-db-pvc

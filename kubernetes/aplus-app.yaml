@@ -1,0 +1,127 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: aplus-app
+  labels:
+    app: aplus
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 9000
+  selector:     # Should be a Pod selector
+    app: aplus
+    tier: frontend
+  externalIPs:
+    - 54.38.254.141
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: aplus-files-pvc
+  labels:
+    app: aplus
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: csi-cinder-classic
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aplus-app-deployment
+  labels:
+    app: aplus
+spec:
+  replicas: 1
+  selector:       # Should match .spec.template
+    matchLabels:
+      app: aplus
+      tier: frontend
+  strategy:
+    type: Recreate  # here RollingUpdate is not well handled by app sql queries
+  template:
+    metadata:
+      labels:
+        app: aplus
+        tier: frontend
+    spec:
+      containers:
+      - image: administrationplus.azurecr.io/aplus:master-20210526-084710z-f9c361b67edc2536f89e0cf1d1190a7467b6dba7
+        name: aplus-app
+        env:
+        - name: APP_HOST
+          value: aplus.beta.gouv.fr
+        - name: APP_HTTPS
+          value: "false"
+        - name: APPLICATION_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: aplus-application-secret
+              key: APPLICATION_SECRET
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: aplus-db-app-secret
+              key: DATABASE_URL
+        - name: EVOLUTIONS_AUTOAPPLY
+          value: "true"
+        - name: FEATURE_AUTO_ADD_EXPERT
+          value: "true"
+        - name: FEATURE_SEND_APPLICATIONS_ANYWHERE
+          value: "true"
+        - name: FEATURE_SMS_MANDAT
+          value: "false"
+        - name: FEATURE_WEEKLY_EMAILS
+          value: "true"
+        - name: FILES_EXPIRATION_IN_DAYS
+          value: "15"
+        - name: FILES_PATH
+          value: "/app/files"
+        - name: GROUPS_WHICH_CANNOT_HAVE_INSTRUCTORS
+          value: "f32d20bf-a201-4875-9c69-16a5a4ad2f9c,ecb83438-b78b-4fbc-b0cd-880ce55562df"
+        - name: MAIL_HOST
+          valueFrom:
+            secretKeyRef:
+              name: aplus-email-secret
+              key: MAIL_HOST
+        - name: MAIL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: aplus-email-secret
+              key: MAIL_PASSWORD
+        - name: MAIL_PORT
+          valueFrom:
+            secretKeyRef:
+              name: aplus-email-secret
+              key: MAIL_PORT
+        - name: MAIL_USER
+          valueFrom:
+            secretKeyRef:
+              name: aplus-email-secret
+              key: MAIL_USER
+        - name: NOTIFICATION_EMAIL_BLACKLIST
+          value: "daniel.balmy@beta.gouv.fr"
+        - name: SMS_USE_LIVE_API
+          value: "false"
+        - name: WEEKLY_EMAILS_DAY_OF_WEEK
+          value: tuesday
+        - name: WEEKLY_EMAILS_HOUR_OF_DAY
+          value: "10"
+        - name: WEEKLY_EMAILS_MAX_NUMBER
+          value: "1000"
+
+        ports:
+        - containerPort: 9000
+        volumeMounts:
+        - name: aplus-files-pv
+          mountPath: /app/files
+      imagePullSecrets:
+      - name: acr-docker-creds
+      volumes:
+      - name: aplus-files-pv
+        persistentVolumeClaim:
+          claimName: aplus-files-pvc

@@ -1,0 +1,112 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aplus-db-backup-script
+data:
+  backup-script: |
+    set -e
+    apt-get update
+    apt-get install -y jq postgresql-client-11
+    pip install python-swiftclient==3.12.0
+    pip install python-keystoneclient==4.2.0
+
+    if [ ! -s /key/key.pub ]
+    then
+      echo "Stopping: no public key"
+      exit 0
+    fi
+    gpg --no-tty --import /key/key.pub
+
+    # Create new backup
+    NOW="$(date +"%Y-%m-%d-%s")"
+    FILENAME="$DATABASE_BACKUP_PREFIX.$NOW.pgdump.gz"
+    pg_dump -Fc $DATABASE_NAME | gzip > $FILENAME
+    gpg --batch --trust-model always --output "${FILENAME}.gpg" --recipient ${RECIPIENT_PUBLIC_KEY_EMAIL} --encrypt ${FILENAME}
+    swift --os-auth-token $AUTH_TOKEN --os-storage-url $STORAGE_URL upload $STORAGE_CONTAINER "${FILENAME}.gpg"
+
+    # Cleanup old backups
+    while read line
+    do
+      date=$(echo "$line" | jq -r '.last_modified')
+      if [ $(date -d "$date" +%s) -le $(date +%s -d "$RETENTION_NUM_OF_DAYS days ago") ]
+      then
+        OLD=$(echo "$line" | jq -r '.name')
+        echo WILL DELETE OLD BACKUP $OLD
+        swift --os-auth-token $AUTH_TOKEN --os-storage-url $STORAGE_URL delete $STORAGE_CONTAINER "$OLD"
+      fi
+    done < <(swift --os-auth-token $AUTH_TOKEN --os-storage-url $STORAGE_URL list --json $STORAGE_CONTAINER | jq -c '.[]')
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: aplus-db-backup-job
+spec:
+  schedule: "0 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: aplus-db-backup
+            image: python:3
+            env:
+            - name: AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: ovh-storage-creds
+                  key: AUTH_TOKEN
+            - name: DATABASE_BACKUP_PREFIX
+              value: "aplus-db"
+            - name: DATABASE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: aplus-db-app-secret
+                  key: DATABASE_NAME
+            - name: PGHOST
+              valueFrom:
+                secretKeyRef:
+                  name: aplus-db-app-secret
+                  key: DATABASE_HOST
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: aplus-db-postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: PGUSER
+              value: postgres
+            - name: RECIPIENT_PUBLIC_KEY_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: aplus-backup-pub-key
+                  key: RECIPIENT_PUBLIC_KEY_EMAIL
+            - name: RETENTION_NUM_OF_DAYS
+              value: "2"
+            - name: STORAGE_CONTAINER
+              value: "aplus-test-storage"
+            - name: STORAGE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ovh-storage-creds
+                  key: STORAGE_URL
+            volumeMounts:
+            - name: script
+              mountPath: "/script"
+            - name: public-key
+              mountPath: "/key"
+            command: ["bash",  "/script/backup.sh"]
+          volumes:
+          - name: script
+            configMap:
+              name: aplus-db-backup-script
+              items:
+              - key: backup-script
+                path: "backup.sh"
+          - name: public-key
+            secret:
+              secretName: aplus-backup-pub-key
+              items:
+              - key: RECIPIENT_PUBLIC_KEY
+                path: "key.pub"
+          restartPolicy: Never
+      backoffLimit: 4
+      # ttlSecondsAfterFinished is not activated on the cluster
