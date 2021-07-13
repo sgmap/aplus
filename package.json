@@ -18,7 +18,7 @@
     "mini-css-extract-plugin": "1.6.0",
     "rimraf": "3.0.2",
     "ts-loader": "9.1.1",
-    "typescript": "4.2.4",
+    "typescript": "4.3.5",
     "webpack": "5.36.2",
     "webpack-cli": "4.6.0",
     "webpack-merge": "5.7.3"
