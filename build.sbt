@@ -107,7 +107,7 @@ libraryDependencies ++= Seq(
   "org.webjars.npm" % "twemoji" % "2.5.1",
   "org.webjars" % "chartjs" % "2.9.4",
   "org.webjars" % "font-awesome" % "5.15.2",
-  "org.webjars.bowergithub.olifolkerd" % "tabulator" % "4.5.3",
+  "org.webjars.bowergithub.olifolkerd" % "tabulator" % "4.9.3",
   "org.webjars.npm" % "xlsx" % "0.16.9"
 )
 // Crash
