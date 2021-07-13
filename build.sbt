@@ -108,7 +108,7 @@ libraryDependencies ++= Seq(
   "org.webjars" % "chartjs" % "2.9.4",
   "org.webjars" % "font-awesome" % "5.15.2",
   "org.webjars.bowergithub.olifolkerd" % "tabulator" % "4.5.3",
-  "org.webjars.npm" % "xlsx" % "0.16.9"
+  "org.webjars.npm" % "xlsx" % "0.17.0"
 )
 // Crash
 libraryDependencies += "io.sentry" % "sentry-logback" % "5.0.1"
