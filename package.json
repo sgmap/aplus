@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "@types/tabulator-tables": "4.8.0",
-    "css-loader": "5.2.4",
+    "css-loader": "5.2.6",
     "mini-css-extract-plugin": "1.6.0",
     "rimraf": "3.0.2",
     "ts-loader": "9.1.1",
